@@ -1,4 +1,5 @@
 .DS_Store
+/imgs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -111,6 +112,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.venvGAN
+/venvGAN
 
 # Spyder project settings
 .spyderproject

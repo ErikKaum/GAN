@@ -3,13 +3,34 @@ from tensorflow import keras
 from tensorflow.keras import layers
 import numpy as np
 import matplotlib.pyplot as plt
-import os
+import sys, os
+import h5py
+
+#Setting global variables
+EPOCHS = 1
+if sys.argv[1:]:
+    EPOCHS = sys.argv[1]
+
+TRAIN = False
+if sys.argv[2:]:
+    TRAIN = sys.argv[2]
 
 LATENT_DIM = 128
-EPOCHS = 1
 IMG_WIDTH = 64
 IMG_HEIGHT = 64
 CHANNELS = 3
+BATCH_SIZE = 32
+
+def load_data():
+    print('Loading data with details:')
+    print(f'img dimensions: {IMG_HEIGHT}, {IMG_WIDTH}')
+    print(f'batch size: {BATCH_SIZE}')
+
+    data = keras.preprocessing.image_dataset_from_directory(
+        "imgs", label_mode=None, image_size=(IMG_WIDTH, IMG_HEIGHT), batch_size=BATCH_SIZE
+    )
+    data = data.map(lambda x: x/255.0)
+    return data
 
 def make_disciminator(number_of_blocks = 2):
     inputs = keras.Input(shape=(IMG_WIDTH, IMG_HEIGHT, CHANNELS), name='input_layer')
@@ -109,7 +130,7 @@ class GAN(keras.Model):
         }
 
 class GANMonitor(keras.callbacks.Callback):
-    def __init__(self, num_img=3, latent_dim=128):
+    def __init__(self, num_img=3, latent_dim=LATENT_DIM):
         self.num_img = num_img
         self.latent_dim = latent_dim
 
@@ -124,27 +145,36 @@ class GANMonitor(keras.callbacks.Callback):
 
 
 def main():
+    print('Starting the process')
+
+    data = load_data()
+    print('Finnished loading data')
+
     discriminator = make_disciminator()
     generator = make_generator()
-
-    discriminator.summary()
-    generator.summary()
-
-
-
+    
     # boilerplate edit later
-    # gan = GAN(discriminator=discriminator, generator=generator, latent_dim=LATENT_DIM)
-    # gan.compile(
-    #     d_optimizer=keras.optimizers.Adam(learning_rate=0.0001),
-    #     g_optimizer=keras.optimizers.Adam(learning_rate=0.0001),
-    #     loss_fn=keras.losses.BinaryCrossentropy(),
-    # )
+    gan = GAN(discriminator=discriminator, generator=generator, latent_dim=LATENT_DIM)
+    gan.compile(
+        d_optimizer=keras.optimizers.Adam(learning_rate=0.0001),
+        g_optimizer=keras.optimizers.Adam(learning_rate=0.0001),
+        loss_fn=keras.losses.BinaryCrossentropy(),
+    )
+    print('Model compiled, start fitting')
 
-    # gan.fit(
-    #     dataset, epochs=EPOCHS, callbacks=[GANMonitor(num_img=10, latent_dim=LATENT_DIM)]
-    # )
+    callback = [
+        GANMonitor(num_img=10, latent_dim=LATENT_DIM),
+        keras.callbacks.Tensorboard(log_dir='logs'),
+    ]
+
+    gan.fit(
+        data, epochs=EPOCHS, callbacks=[]
+    )
+
+    os.mkdir('saved_model')
+    gan.save('saved_model/my_model.h5')
+
 
 if __name__ == '__main__':
     main()
-
 
